@@ -28,6 +28,37 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/exercises?muscle_group=Chest
+// Filter by muscle group
+router.get('/filter', async (req, res) => {
+  const { muscle_group, equipment, difficulty } = req.query;
+  const filter = {};
+  if (muscle_group) filter.muscle_group = muscle_group;
+  if (equipment)    filter.equipment    = equipment;
+  if (difficulty)   filter.difficulty   = difficulty;
 
+  try {
+    const exercises = await Exercise.find(filter).sort({ name: 1 });
+    res.json({ exercises, count: exercises.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/exercises — add a custom exercise (authenticated)
+router.post('/', authMiddleware, async (req, res) => {
+  try {
+    const { name, muscle_group, equipment, difficulty, description } = req.body;
+    const exercise = await Exercise.create({ name, muscle_group, equipment, difficulty, description });
+
+    // Invalidate exercise cache
+    await req.redis.del('cache:exercises');
+    console.log('[Redis] DEL cache:exercises (new exercise added)');
+
+    res.status(201).json({ message: 'Exercise added', exercise });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
 
 module.exports = router;
