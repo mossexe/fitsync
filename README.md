@@ -1,65 +1,56 @@
-# 🏋️ FitSync — Fitness Tracker App
-
-> A Hevy-inspired fitness tracking application built with **MongoDB + Redis**, developed as a final group project for ENCE614016 — Database System and Laboratory.
-
-![MongoDB](https://img.shields.io/badge/MongoDB-7.0-green?logo=mongodb) ![Redis](https://img.shields.io/badge/Redis-7.0-red?logo=redis) ![Node.js](https://img.shields.io/badge/Node.js-20-brightgreen?logo=node.js) ![Docker](https://img.shields.io/badge/Docker-Compose-blue?logo=docker)
+---
+title: README
 
 ---
 
-## 👥 Group NAMO
+# FitSync - Fitness Tracker App
+
+> A Hevy-inspired fitness tracking application built with **MongoDB + Redis**, developed as a final group project for ENCE614016 — Database System and Laboratory.
+
+---
+
+## Group NAMO
 
 | Name | Student ID | Role |
 |------|------------|------|
-| Nadira Fayyaza Aisy | __________ | Backend & MongoDB Lead |
-| Naufal Rafif Adigama | __________ | Redis & Benchmarking Lead |
-| Syifa Sarah Nuraini | __________ | Frontend & Documentation Lead |
+| Nadira Fayyaza Aisy | 2406368933 | Backend & MongoDB Lead |
+| Naufal Rafif Adigama | 2406368965 | Redis & Benchmarking Lead |
+| Syifa Sarah Nuraini | 2406368883 | Frontend & Documentation Lead |
 
-**Course:** ENCE614016 — Database System and Laboratory  
+**Course:** ENCE614016 - Database System and Laboratory  
 **Deadline:** 15 May 2026
 
 ---
 
-## 📌 Project Overview
+## Project Overview
 
-FitSync is a fitness tracker app inspired by [Hevy](https://hevy.com). Users can log workouts, track exercise history, view weekly stats, and compete on a streak-based leaderboard — all powered by a dual-database backend.
+FitSync is a fitness tracker app inspired by [Hevy](https://hevy.com). Users can log workouts, track exercise history, view weekly stats, and compete on a streak-based leaderboard.
+All powered by a dual-database backend.
 
 ### Why Two Databases?
 
 | Database | Role in FitSync | Why |
 |----------|----------------|-----|
-| **MongoDB** | Persistent storage — users, workouts, exercises | Document model fits nested workout/exercise data naturally |
+| **MongoDB** | Persistent storage users, workouts, exercises | Document model fits nested workout/exercise data naturally |
 | **Redis** | Real-time leaderboard, session tokens, API cache | Sub-millisecond reads for live rankings; TTL for sessions |
 
 These are **not redundant** — MongoDB is the source of truth, Redis handles everything time-sensitive and high-frequency.
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
-```
-┌─────────────┐        ┌──────────────────────────────────────────┐
-│   Client    │──────▶ │         Express REST API (:3000)          │
-│  (Browser)  │        │                                          │
-└─────────────┘        │  ┌─────────────────┐  ┌──────────────┐  │
-                       │  │    MongoDB       │  │    Redis     │  │
-                       │  │   (:27017)       │  │   (:6379)    │  │
-                       │  │                  │  │              │  │
-                       │  │ • users          │  │ • leaderboard│  │
-                       │  │ • workouts       │  │ • sessions   │  │
-                       │  │ • exercises      │  │ • cache      │  │
-                       │  └─────────────────┘  └──────────────┘  │
-                       └──────────────────────────────────────────┘
-```
+![03295ae5-cc48-4fbc-8020-7668f5c569d8](https://hackmd.io/_uploads/H1VEVBuRZx.jpg)
+
 
 ### Data Flow
-- **POST /api/workouts** → writes to MongoDB → updates Redis `ZADD leaderboard`  → invalidates cache
-- **GET /api/leaderboard** → reads directly from Redis `ZRANGE` (no MongoDB hit)
-- **POST /api/auth/login** → validates via MongoDB → stores session in Redis `SETEX` (1hr TTL)
-- **GET /api/stats/weekly/:id** → checks Redis cache → on miss, runs MongoDB aggregation → caches result (5min TTL)
+
+![5bff5d8b-9fc0-4c90-832a-afe92362d511](https://hackmd.io/_uploads/rJ9vNB_CZx.jpg)
+
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 fitsync/
@@ -93,7 +84,7 @@ fitsync/
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - [Docker Desktop](https://www.docker.com/products/docker-desktop) installed and running
@@ -127,21 +118,24 @@ GET  http://localhost:3000/api/stats/weekly/:userId
 
 ---
 
-## 🔌 API Reference
+## API Reference
 
 ### Auth
+
 | Method | Endpoint | Body | Description |
 |--------|----------|------|-------------|
 | POST | `/api/auth/register` | `{ username, email, password, profile }` | Register new user → saved to MongoDB |
 | POST | `/api/auth/login` | `{ email, password }` | Login → session token stored in Redis SETEX |
 
 ### Workouts
+
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | POST | `/api/workouts` | ✅ | Log workout → MongoDB + updates Redis leaderboard |
 | GET | `/api/workouts` | ✅ | Get all workouts for current user from MongoDB |
 
 ### Leaderboard & Stats
+
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | GET | `/api/leaderboard` | ❌ | Top 10 streak rankings → read directly from Redis |
@@ -149,7 +143,7 @@ GET  http://localhost:3000/api/stats/weekly/:userId
 
 ---
 
-## 🗄️ Data Models
+## Data Models
 
 ### MongoDB — `users` collection
 ```json
@@ -183,15 +177,19 @@ GET  http://localhost:3000/api/stats/weekly/:userId
 ```
 
 ### Redis Key Design
-```
-leaderboard               → Sorted Set  (ZADD leaderboard <streak> <userId>)
-session:<token>           → String      (SETEX, TTL 3600s)
-cache:weekly:<userId>     → String/JSON (SETEX, TTL 300s)
-```
+
+![1e9d7ab1-0d81-41a1-8711-681c5eedac6d](https://hackmd.io/_uploads/rktuEHdRZx.jpg)
+
+
+| Key Pattern | Type | Command | TTL |
+|-------------|------|---------|-----|
+| `leaderboard` | Sorted Set | `ZADD leaderboard <streak> <userId>` | No expiry |
+| `session:<token>` | String | `SETEX` | 3600s (1 hr) |
+| `cache:weekly:<userId>` | String/JSON | `SETEX` | 300s (5 min) |
 
 ---
 
-## 📊 Benchmarks
+## Benchmarks
 
 Benchmarks compare **Redis cache read** vs **MongoDB aggregation query** for the weekly stats endpoint.
 
@@ -204,7 +202,7 @@ docker exec fitsync_api node benchmarks/benchmark.js
 
 ---
 
-## 🤖 AI Usage Disclosure
+## AI Usage Disclosure
 
 This project used **Claude (Anthropic)** to assist with:
 - Initial project scaffolding (Express routes, MongoDB schemas, Redis integration patterns)
@@ -215,5 +213,6 @@ All generated code was reviewed, tested, and understood by all group members. Ev
 
 ---
 
-## 📄 License
+## License
+
 MIT — for academic use only.
