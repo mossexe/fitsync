@@ -58,6 +58,36 @@ router.get('/history', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/users/personal-records — best lifts per exercise
+router.get('/personal-records', authMiddleware, async (req, res) => {
+  const cacheKey = `cache:pr:${req.user.userId}`;
+  try {
+    // Check cache
+    const cached = await req.redis.get(cacheKey);
+    if (cached) {
+      return res.json({ source: 'redis_cache', records: JSON.parse(cached) });
+    }
 
+    // MongoDB aggregation — best weight per exercise
+    const records = await Workout.aggregate([
+      { $match: { user_id: require('mongoose').Types.ObjectId.createFromHexString(req.user.userId.toString()) } },
+      { $unwind: '$exercises' },
+      { $group: {
+          _id: '$exercises.name',
+          best_weight_kg: { $max: '$exercises.weight_kg' },
+          best_reps:      { $max: '$exercises.reps' },
+          total_sets:     { $sum: '$exercises.sets' }
+      }},
+      { $sort: { _id: 1 } }
+    ]);
+
+    // Cache for 5 minutes
+    await req.redis.setEx(cacheKey, 300, JSON.stringify(records));
+
+    res.json({ source: 'mongodb', records });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 module.exports = router;
