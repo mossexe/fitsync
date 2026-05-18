@@ -200,19 +200,3 @@ To run benchmarks yourself:
 docker exec fitsync_api node benchmarks/benchmark.js
 ```
 
----
-
-## AI Usage Disclosure
-
-This project used **Claude (Anthropic)** to assist with:
-- Initial project scaffolding (Express routes, MongoDB schemas, Redis integration patterns)
-- docker-compose configuration
-- README structure
-
-All generated code was reviewed, tested, and understood by all group members. Every member is able to explain any part of the codebase during Q&A, as required by the academic integrity policy.
-
----
-
-## License
-
-MIT — for academic use only.
